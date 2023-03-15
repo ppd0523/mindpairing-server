@@ -1,0 +1,8 @@
+.idea/
+.DS_STORE
+venv/
+
+*.py[cod]
+*.sqlite3
+**/keystore.py
+**/migrations/

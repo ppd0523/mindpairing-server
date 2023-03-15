@@ -1,0 +1,13 @@
+django == 4.1.7
+psycopg2-binary == 2.9.5
+django-cors-headers == 3.13.0
+djangorestframework == 3.14.0
+Pillow == 9.4.0
+djangorestframework-simplejwt == 5.2.2
+requests == 2.28.2
+gunicorn
+whitenoise
+dj-database-url
+drf-yasg
+firebase-admin
+google-cloud-storage
