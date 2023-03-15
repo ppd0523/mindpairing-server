@@ -7,6 +7,8 @@ https://mindpairing-django.herokuapp.com/
 1. Set Config Vars
 * DISABLE_COLLECTSTATIC=1
 * DJANGO_SECRET_KEY
+* FIREBASE_PRIVATE_KEY
+* FIREBASE_PRIVATE_KEY_ID
 
 2. Heroku CLI
 ```bash
