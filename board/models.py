@@ -196,6 +196,7 @@ class Penalty(models.Model):
     end_at = models.DateTimeField()
     report_id = models.OneToOneField(Report, on_delete=models.SET_NULL, db_column='report_id', null=True, blank=True, related_name='penalty')
     comment = models.TextField()
+    memo = models.TextField()
     create_at = models.DateTimeField(auto_now_add=True, editable=False)
     update_at = models.DateTimeField(auto_now=True)
 

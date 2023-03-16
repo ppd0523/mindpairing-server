@@ -3,6 +3,7 @@ from membership.models import User
 
 
 class Terms(models.Model):
+    index = models.PositiveSmallIntegerField()
     title = models.CharField(max_length=255, null=False, blank=False)
     content = models.TextField()
     mandatory = models.BooleanField(null=False, blank=False)
@@ -13,7 +14,7 @@ class Terms(models.Model):
         verbose_name = 'Terms'
 
     def __str__(self):
-        return f"{self.title}({self.mandatory})"
+        return f"({self.index}) {self.title}({self.mandatory})"
 
 
 class Agreement(models.Model):
