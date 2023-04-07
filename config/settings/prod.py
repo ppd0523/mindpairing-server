@@ -11,3 +11,6 @@ FIREBASE_INFO.update({
     "private_key_id": os.environ.get('FIREBASE_PRIVATE_KEY_ID', None),
     "private_key": os.environ.get('FIREBASE_PRIVATE_KEY', None),
 })
+
+# os.environ['KAKAO_OAUTH_CLIENT_ID']
+# os.environ['KAKAO_OAUTH_REDIRECT_URI']
