@@ -6,14 +6,14 @@ from hashtag.serializer import *
 
 
 class BoardHashtagSerializer(serializers.ModelSerializer):
-    hashtag = serializers.SerializerMethodField('get_hashtag', read_only=True)
+    topic = serializers.SerializerMethodField('get_topic', read_only=True)
 
-    def get_hashtag(self, obj):
+    def get_topic(self, obj):
         return obj.hashtag_id.text
 
     class Meta:
         model = BoardHashtagAssoc
-        fields = ('index', 'hashtag')
+        fields = ('index', 'topic')
 
 
 class BoardSerializer(serializers.ModelSerializer):
@@ -28,11 +28,12 @@ class BoardSerializer(serializers.ModelSerializer):
 
 
 class SimplePostSerializer(serializers.ModelSerializer):
-    board = serializers.CharField(source='board_id.category', read_only=True)
+    category = serializers.SerializerMethodField(read_only=True)
     topic = serializers.CharField(source='hashtag_id.text', read_only=True)
-    author = serializers.CharField(source='user_id.nickname', read_only=True)
+    author = UserSimpleProfileSerializer(source='user_id', read_only=True)
     is_liked = serializers.BooleanField(read_only=True)
     comment_count = serializers.SerializerMethodField(read_only=True)
+
     short_content = serializers.SerializerMethodField(read_only=True)
     create_at = serializers.DateTimeField(format=settings.DATETIME_FORMAT)
     update_at = serializers.DateTimeField(format=settings.DATETIME_FORMAT)
@@ -52,6 +53,9 @@ class SimplePostSerializer(serializers.ModelSerializer):
 
         return data
 
+    def get_category(self, obj: Post):
+        return obj.board_id.category
+
     def get_comment_count(self, obj: Post):
         return obj.comment_set.count()
 
@@ -60,7 +64,7 @@ class SimplePostSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Post
-        fields = ('id', 'board', 'topic', 'mbti', 'author', 'title', 'short_content', 'view', 'like', 'is_liked', 'comment_count', 'report', 'create_at', 'update_at')
+        fields = ('id', 'category', 'topic', 'mbti', 'author', 'title', 'short_content', 'view', 'like', 'is_liked', 'comment_count', 'report', 'create_at', 'update_at')
 
 
 class PostWithImagesSerializer(serializers.ModelSerializer):
@@ -116,12 +120,17 @@ class PostDetailSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
 
         try:
-            instance.like_post_assoc_set.filter(user_id=self.user_id_value)
+            instance.like_post_assoc_set.get(user_id=self.user_id_value)
             data['is_liked'] = True
         except Exception as e:
             data['is_liked'] = False
 
         return data
+
+    def update(self, instance, validated_data):
+        title = validated_data.get('title', instance.title)
+        content = validated_data.get('content', instance.content)
+        instance.save()
 
     class Meta:
         model = Post
