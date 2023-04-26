@@ -6,6 +6,7 @@ from mbti.models import *
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     list_display = ['id', 'is_init', 'nickname', 'gender', 'mbti']
+    readonly_fields = ['password', ]
     list_display_links = ['nickname']
     search_fields = ['nickname', ]
     ordering = ['-id']

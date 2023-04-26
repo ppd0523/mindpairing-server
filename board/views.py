@@ -8,15 +8,19 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from .serializers import *
 
+import logging
+logger = logging.getLogger("django")
+
 
 class BoardList(APIView):
     @swagger_auto_schema(
-        tags=['게시판', ],
+        tags=['게시판'],
+        operation_summary='게시판 분류 얻기',
         operation_id='board_list_get',
-        operation_description='게시판 전체 목록z',
+        operation_description='게시판 분류',
         responses={
             200: openapi.Response(
-                description='게시판 전체 목록과 각 게시판의 토픽 정보',
+                description='게시판 분류와 분류 내 주제',
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
@@ -50,53 +54,13 @@ class BoardList(APIView):
         return Response(data={'data': serializer.data}, status=status.HTTP_200_OK)
 
 
-# class PostListByName(APIView):
-#     authentication_classes = [JWTAuthentication]
-#     permission_classes = [IsAuthenticated]
-#
-#     @swagger_auto_schema(
-#         tags=['게시판', '글', '댓글'],
-#         operation_id='post_list_by_name_get',
-#         operation_summary='게시판의 글 목록과 각 글의 요약 정보 반환',
-#         manual_parameters=[
-#             openapi.Parameter(
-#                 'category', openapi.IN_PATH, type=openapi.TYPE_STRING,
-#             ),
-#             openapi.Parameter(
-#                 'topic', openapi.IN_PATH, type=openapi.TYPE_STRING,
-#             ),
-#         ],
-#         responses={
-#             200: openapi.Response(
-#                 description='글 요약 정보 리스트',
-#                 # schema=openapi.Schema(type='Post')
-#             ),
-#             400: openapi.Response(
-#                 description='잘못된 카테고리 이름 혹은 잘못된 토픽 이름',
-#             )
-#         }
-#     )
-#     def get(self, request, category, topic):
-#         try:
-#             board = Board.objects.get(category=category, hidden=False)
-#             hashtag = Hashtag.objects.get(text=topic)
-#             board_hashtag_assoc = BoardHashtagAssoc.objects.get(board_id=board, hashtag_id=hashtag, hidden=False)
-#         except Exception as e:
-#             return Response({'data': []}, status=status.HTTP_400_BAD_REQUEST)
-#
-#         posts = Post.objects.filter(board_id=board, hashtag_id=board_hashtag_assoc.hashtag_id, hidden=False)
-#         serializer = SimplePostSerializer(posts, user_id=request.user, many=True)
-#
-#         return Response(data={'data': serializer.data}, status=status.HTTP_200_OK)
-
-
 class PostListByIndex(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        tags=['게시판', '글', '댓글'],
-        operation_summary='게시판의 글 목록과 각 글의 요약 정보',
+        tags=['글'],
+        operation_summary='[deprecated] 게시판의 글 목록과 각 글의 요약 정보',
         operation_id='post_list_by_index_get',
         manual_parameters=[
             openapi.Parameter(
@@ -185,7 +149,7 @@ class PostDetail(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        tags=['게시판', '글', '댓글'],
+        tags=['글'],
         operation_id='post_detail_get',
         operation_summary='글과 댓글 읽기',
         manual_parameters=[
@@ -205,55 +169,50 @@ class PostDetail(APIView):
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
-                        'data': openapi.Schema(
+                        'post_id': openapi.Schema(type=openapi.TYPE_NUMBER),
+                        'category': openapi.Schema(type=openapi.TYPE_STRING),
+                        'topic': openapi.Schema(type=openapi.TYPE_STRING),
+                        'mbti': openapi.Schema(type=openapi.TYPE_STRING),
+                        'author': openapi.Schema(
                             type=openapi.TYPE_OBJECT,
                             properties={
-                                'post_id': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                'category': openapi.Schema(type=openapi.TYPE_STRING),
-                                'topic': openapi.Schema(type=openapi.TYPE_STRING),
+                                'nickname': openapi.Schema(type=openapi.TYPE_STRING),
                                 'mbti': openapi.Schema(type=openapi.TYPE_STRING),
-                                'author': openapi.Schema(
-                                    type=openapi.TYPE_OBJECT,
-                                    properties={
-                                        'nickname': openapi.Schema(type=openapi.TYPE_STRING),
-                                        'mbti': openapi.Schema(type=openapi.TYPE_STRING),
-                                        'image': openapi.Schema(type='null'),
-                                    }
-                                ),
-                                'title': openapi.Schema(type=openapi.TYPE_STRING),
-                                'content': openapi.Schema(type=openapi.TYPE_STRING),
-                                'view': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                'like': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                'create_at': openapi.Schema(type='DATE'),
-                                'update_at': openapi.Schema(type='DATE'),
-                                'is_liked': openapi.Schema(type=openapi.TYPE_BOOLEAN),
-                                'comments': openapi.Schema(
-                                    type=openapi.TYPE_ARRAY,
-                                    items=openapi.Items(
+                                'image': openapi.Schema(type='null'),
+                            }
+                        ),
+                        'title': openapi.Schema(type=openapi.TYPE_STRING),
+                        'content': openapi.Schema(type=openapi.TYPE_STRING),
+                        'view': openapi.Schema(type=openapi.TYPE_NUMBER),
+                        'like': openapi.Schema(type=openapi.TYPE_NUMBER),
+                        'create_at': openapi.Schema(type='DATE'),
+                        'update_at': openapi.Schema(type='DATE'),
+                        'is_liked': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'comments': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Items(
+                                type=openapi.TYPE_OBJECT,
+                                properties={
+                                    'comment_id': openapi.Schema(type=openapi.TYPE_NUMBER),
+                                    'content': openapi.Schema(type=openapi.TYPE_STRING),
+                                    'like': openapi.Schema(type=openapi.TYPE_NUMBER),
+                                    'report': openapi.Schema(type=openapi.TYPE_NUMBER),
+                                    'create_at': openapi.Schema(type='DATE'),
+                                    'update_at': openapi.Schema(type='DATE'),
+                                    'author': openapi.Schema(
                                         type=openapi.TYPE_OBJECT,
                                         properties={
-                                            'comment_id': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                            'content': openapi.Schema(type=openapi.TYPE_STRING),
-                                            'like': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                            'report': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                            'create_at': openapi.Schema(type='DATE'),
-                                            'update_at': openapi.Schema(type='DATE'),
-                                            'author': openapi.Schema(
-                                                type=openapi.TYPE_OBJECT,
-                                                properties={
-                                                    'nickname': openapi.Schema(type=openapi.TYPE_STRING),
-                                                    'mbti': openapi.Schema(type=openapi.TYPE_STRING),
-                                                    'image': openapi.Schema(type='null'),
-                                                }
-                                            ),
-                                            'parent_comment_id': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                            'is_liked': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                                            'nickname': openapi.Schema(type=openapi.TYPE_STRING),
+                                            'mbti': openapi.Schema(type=openapi.TYPE_STRING),
+                                            'image': openapi.Schema(type='null'),
                                         }
-                                    )
-                                ),
-                            },
+                                    ),
+                                    'parent_comment_id': openapi.Schema(type=openapi.TYPE_NUMBER),
+                                    'is_liked': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                                }
+                            )
                         ),
-                    }
+                    },
                 )
             ),
             400: openapi.Response(
@@ -262,6 +221,10 @@ class PostDetail(APIView):
         }
     )
     def get(self, request, post_id):
+        """
+        Post and comment
+        #TODO Query string 미구현
+        """
         try:
             post = Post.objects.get(id=post_id)
         except Exception as e:
@@ -274,13 +237,19 @@ class PostDetail(APIView):
         post_serializer = PostDetailSerializer(post, user_id=request.user, many=False)
 
         comment_serializer = CommentSerializer(post.comment_set.filter(hidden=False), user_id=request.user, many=True)
+        data = {**post_serializer.data}
+
+        if post.board_id.category == '매거진':
+            data.update({'thumbnamil': None})
+
         return Response({
-            'data': {**post_serializer.data},
+            'data': data,
             'comments': comment_serializer.data,
         }, status=status.HTTP_200_OK)
 
+
     @swagger_auto_schema(
-        tags=['게시판', '글', '댓글'],
+        tags=['글'],
         operation_id='post_detail_post',
         operation_summary='글 수정하기',
         manual_parameters=[
@@ -302,55 +271,50 @@ class PostDetail(APIView):
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
-                        'data': openapi.Schema(
+                        'post_id': openapi.Schema(type=openapi.TYPE_NUMBER),
+                        'category': openapi.Schema(type=openapi.TYPE_STRING),
+                        'topic': openapi.Schema(type=openapi.TYPE_STRING),
+                        'mbti': openapi.Schema(type=openapi.TYPE_STRING),
+                        'author': openapi.Schema(
                             type=openapi.TYPE_OBJECT,
                             properties={
-                                'post_id': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                'category': openapi.Schema(type=openapi.TYPE_STRING),
-                                'topic': openapi.Schema(type=openapi.TYPE_STRING),
+                                'nickname': openapi.Schema(type=openapi.TYPE_STRING),
                                 'mbti': openapi.Schema(type=openapi.TYPE_STRING),
-                                'author': openapi.Schema(
-                                    type=openapi.TYPE_OBJECT,
-                                    properties={
-                                        'nickname': openapi.Schema(type=openapi.TYPE_STRING),
-                                        'mbti': openapi.Schema(type=openapi.TYPE_STRING),
-                                        'image': openapi.Schema(type='null'),
-                                    }
-                                ),
-                                'title': openapi.Schema(type=openapi.TYPE_STRING),
-                                'content': openapi.Schema(type=openapi.TYPE_STRING),
-                                'view': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                'like': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                'create_at': openapi.Schema(type='DATE'),
-                                'update_at': openapi.Schema(type='DATE'),
-                                'is_liked': openapi.Schema(type=openapi.TYPE_BOOLEAN),
-                                'comments': openapi.Schema(
-                                    type=openapi.TYPE_ARRAY,
-                                    items=openapi.Items(
+                                'image': openapi.Schema(type='null'),
+                            }
+                        ),
+                        'title': openapi.Schema(type=openapi.TYPE_STRING),
+                        'content': openapi.Schema(type=openapi.TYPE_STRING),
+                        'view': openapi.Schema(type=openapi.TYPE_NUMBER),
+                        'like': openapi.Schema(type=openapi.TYPE_NUMBER),
+                        'create_at': openapi.Schema(type='DATE'),
+                        'update_at': openapi.Schema(type='DATE'),
+                        'is_liked': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'comments': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Items(
+                                type=openapi.TYPE_OBJECT,
+                                properties={
+                                    'comment_id': openapi.Schema(type=openapi.TYPE_NUMBER),
+                                    'content': openapi.Schema(type=openapi.TYPE_STRING),
+                                    'like': openapi.Schema(type=openapi.TYPE_NUMBER),
+                                    'report': openapi.Schema(type=openapi.TYPE_NUMBER),
+                                    'create_at': openapi.Schema(type='DATE'),
+                                    'update_at': openapi.Schema(type='DATE'),
+                                    'author': openapi.Schema(
                                         type=openapi.TYPE_OBJECT,
                                         properties={
-                                            'comment_id': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                            'content': openapi.Schema(type=openapi.TYPE_STRING),
-                                            'like': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                            'report': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                            'create_at': openapi.Schema(type='DATE'),
-                                            'update_at': openapi.Schema(type='DATE'),
-                                            'author': openapi.Schema(
-                                                type=openapi.TYPE_OBJECT,
-                                                properties={
-                                                    'nickname': openapi.Schema(type=openapi.TYPE_STRING),
-                                                    'mbti': openapi.Schema(type=openapi.TYPE_STRING),
-                                                    'image': openapi.Schema(type='null'),
-                                                }
-                                            ),
-                                            'parent_comment_id': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                            'is_liked': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                                            'nickname': openapi.Schema(type=openapi.TYPE_STRING),
+                                            'mbti': openapi.Schema(type=openapi.TYPE_STRING),
+                                            'image': openapi.Schema(type='null'),
                                         }
-                                    )
-                                ),
-                            },
+                                    ),
+                                    'parent_comment_id': openapi.Schema(type=openapi.TYPE_NUMBER),
+                                    'is_liked': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                                }
+                            )
                         ),
-                    }
+                    },
                 )
             ),
             400: openapi.Response(
@@ -390,7 +354,7 @@ class PostDetail(APIView):
         return Response({'data': serializer.data}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
-        tags=['게시판', '글', '댓글'],
+        tags=['글'],
         operation_id='post_detail_delete',
         operation_summary='글 삭제하기',
         manual_parameters=[
@@ -425,22 +389,22 @@ class PostDetail(APIView):
         return Response({}, status=status.HTTP_200_OK)
 
 
-class CreatePost(APIView):
+class CreateOrGetPost(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        tags=['게시판', '글', '댓글'],
-        operation_id='post_detail_put',
+        tags=['글'],
+        operation_id='post_put',
         operation_summary='글 쓰기',
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'category': openapi.Schema(type=openapi.TYPE_STRING),
-                'topic': openapi.Schema(type=openapi.TYPE_STRING),
-                'mbti': openapi.Schema(type=openapi.TYPE_STRING),
-                'title': openapi.Schema(type=openapi.TYPE_STRING, description='title'),
-                'content': openapi.Schema(type=openapi.TYPE_STRING, description='content'),
+                'category': openapi.Schema(type=openapi.TYPE_STRING, description='카테고리 분류 [연애, 매거진, 회사,...]'),
+                'topic': openapi.Schema(type=openapi.TYPE_STRING, description='토픽 분류 [연애, 연봉, 가족,...]'),
+                'mbti': openapi.Schema(type=openapi.TYPE_STRING, description='mbti 분류 [intp, entp, istj, ...]'),
+                'title': openapi.Schema(type=openapi.TYPE_STRING),
+                'content': openapi.Schema(type=openapi.TYPE_STRING),
             },
         ),
         responses={
@@ -449,55 +413,50 @@ class CreatePost(APIView):
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
-                        'data': openapi.Schema(
+                        'post_id': openapi.Schema(type=openapi.TYPE_NUMBER),
+                        'category': openapi.Schema(type=openapi.TYPE_STRING),
+                        'topic': openapi.Schema(type=openapi.TYPE_STRING),
+                        'mbti': openapi.Schema(type=openapi.TYPE_STRING),
+                        'author': openapi.Schema(
                             type=openapi.TYPE_OBJECT,
                             properties={
-                                'post_id': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                'category': openapi.Schema(type=openapi.TYPE_STRING),
-                                'topic': openapi.Schema(type=openapi.TYPE_STRING),
+                                'nickname': openapi.Schema(type=openapi.TYPE_STRING),
                                 'mbti': openapi.Schema(type=openapi.TYPE_STRING),
-                                'author': openapi.Schema(
-                                    type=openapi.TYPE_OBJECT,
-                                    properties={
-                                        'nickname': openapi.Schema(type=openapi.TYPE_STRING),
-                                        'mbti': openapi.Schema(type=openapi.TYPE_STRING),
-                                        'image': openapi.Schema(type='null'),
-                                    }
-                                ),
-                                'title': openapi.Schema(type=openapi.TYPE_STRING),
-                                'content': openapi.Schema(type=openapi.TYPE_STRING),
-                                'view': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                'like': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                'create_at': openapi.Schema(type='DATE'),
-                                'update_at': openapi.Schema(type='DATE'),
-                                'is_liked': openapi.Schema(type=openapi.TYPE_BOOLEAN),
-                                'comments': openapi.Schema(
-                                    type=openapi.TYPE_ARRAY,
-                                    items=openapi.Items(
+                                'image': openapi.Schema(type='null'),
+                            }
+                        ),
+                        'title': openapi.Schema(type=openapi.TYPE_STRING),
+                        'content': openapi.Schema(type=openapi.TYPE_STRING),
+                        'view': openapi.Schema(type=openapi.TYPE_NUMBER),
+                        'like': openapi.Schema(type=openapi.TYPE_NUMBER),
+                        'create_at': openapi.Schema(type='DATE'),
+                        'update_at': openapi.Schema(type='DATE'),
+                        'is_liked': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'comments': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Items(
+                                type=openapi.TYPE_OBJECT,
+                                properties={
+                                    'comment_id': openapi.Schema(type=openapi.TYPE_NUMBER),
+                                    'content': openapi.Schema(type=openapi.TYPE_STRING),
+                                    'like': openapi.Schema(type=openapi.TYPE_NUMBER),
+                                    'report': openapi.Schema(type=openapi.TYPE_NUMBER),
+                                    'create_at': openapi.Schema(type='DATE'),
+                                    'update_at': openapi.Schema(type='DATE'),
+                                    'author': openapi.Schema(
                                         type=openapi.TYPE_OBJECT,
                                         properties={
-                                            'comment_id': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                            'content': openapi.Schema(type=openapi.TYPE_STRING),
-                                            'like': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                            'report': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                            'create_at': openapi.Schema(type='DATE'),
-                                            'update_at': openapi.Schema(type='DATE'),
-                                            'author': openapi.Schema(
-                                                type=openapi.TYPE_OBJECT,
-                                                properties={
-                                                    'nickname': openapi.Schema(type=openapi.TYPE_STRING),
-                                                    'mbti': openapi.Schema(type=openapi.TYPE_STRING),
-                                                    'image': openapi.Schema(type='null'),
-                                                }
-                                            ),
-                                            'parent_comment_id': openapi.Schema(type=openapi.TYPE_NUMBER),
-                                            'is_liked': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                                            'nickname': openapi.Schema(type=openapi.TYPE_STRING),
+                                            'mbti': openapi.Schema(type=openapi.TYPE_STRING),
+                                            'image': openapi.Schema(type='null'),
                                         }
-                                    )
-                                ),
-                            },
+                                    ),
+                                    'parent_comment_id': openapi.Schema(type=openapi.TYPE_NUMBER),
+                                    'is_liked': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                                }
+                            )
                         ),
-                    }
+                    },
                 )
             ),
             400: openapi.Response(description='없는 게시판 혹은 없는 토픽',),
@@ -546,6 +505,88 @@ class CreatePost(APIView):
         post.save()
         serializer = PostDetailSerializer(post, user_id=request.user)
         return Response({'data': serializer.data}, status=status.HTTP_201_CREATED)
+
+
+    @swagger_auto_schema(
+        tags=['글', ],
+        operation_id='post_list_get',
+        operation_summary='글 목록',
+        manual_parameters=[
+            openapi.Parameter(
+                'board_index', openapi.IN_PATH, type=openapi.TYPE_NUMBER,
+                default='',
+            ),
+            openapi.Parameter(
+                'topic_index', openapi.IN_PATH, type=openapi.TYPE_NUMBER,
+                default=1,
+            ),
+            openapi.Parameter(
+                'pageSize', openapi.IN_QUERY, type=openapi.TYPE_NUMBER,
+                default=10, description='한 번에 호출하는 요약 게시글 개수. 최대 Size 100',
+            ),
+            openapi.Parameter(
+                'pageNum', openapi.IN_QUERY, type=openapi.TYPE_NUMBER,
+                default=1, description='게시글 페이지 번호. 최근에 생성된 데이터가 1 Page'
+            ),
+        ],
+        responses={
+            200: openapi.Response(
+                description='글 목록',
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'post_id': openapi.Schema(type=openapi.TYPE_NUMBER),
+                        'category': openapi.Schema(type=openapi.TYPE_STRING),
+                        'topic': openapi.Schema(type=openapi.TYPE_STRING),
+                        'mbti': openapi.Schema(type=openapi.TYPE_STRING),
+                        'author': openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'nickname': openapi.Schema(type=openapi.TYPE_STRING),
+                                'mbti': openapi.Schema(type=openapi.TYPE_STRING),
+                                'image': openapi.Schema(type='null'),
+                            }
+                        ),
+                        'title': openapi.Schema(type=openapi.TYPE_STRING),
+                        'content': openapi.Schema(type=openapi.TYPE_STRING),
+                        'view': openapi.Schema(type=openapi.TYPE_NUMBER),
+                        'like': openapi.Schema(type=openapi.TYPE_NUMBER),
+                        'create_at': openapi.Schema(type='DATE'),
+                        'update_at': openapi.Schema(type='DATE'),
+                        'is_liked': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                    },
+                )
+            ),
+            400: openapi.Response(description='없는 게시판 혹은 없는 토픽',),
+        }
+    )
+    def get(self, request):
+        filter_dict = {'hidden': False}
+        d = request.GET.get('board-index', None)
+        if d:
+            filter_dict['board-index'] = d
+
+        d = request.GET.get('topic-index', None)
+        if d:
+            filter_dict['topic-index'] = d
+
+        d = request.GET.get('mbti', None)
+        if d:
+            filter_dict['mbti'] = d
+
+        posts = Post.objects.filter(**filter_dict).order_by('-create_at')
+
+        try:
+            page_size = int(request.GET.get('pageSize', '10'))
+            page_num = int(request.GET.get('pageNum', '1'))
+        except Exception as e:
+            return Response({'msg': 'pageSize and pageNum MUST be NUMBER'}, status=status.HTTP_400_BAD_REQUEST)
+
+        post_paginator = Paginator(posts, page_size)  # zero based
+        paged_posts = post_paginator.get_page(page_num)
+        serializer = SimplePostSerializer(paged_posts, user_id=request.user, many=True)
+
+        return Response(data={'data': serializer.data}, status=status.HTTP_200_OK)
 
 
 class MessageList(APIView):
@@ -597,6 +638,26 @@ class LikePost(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
+
+    @swagger_auto_schema(
+        tags=['글', ],
+        operation_id='like_post_put',
+        operation_summary='글 좋아요',
+        manual_parameters=[
+            openapi.Parameter('post_id', openapi.IN_PATH, type=openapi.TYPE_NUMBER),
+        ],
+        responses={
+            200: openapi.Response(
+                description='성공',
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                    }
+                )
+            ),
+            400: openapi.Response(description='',),
+        }
+    )
     def put(self, request, post_id):
         try:
             post = Post.objects.get(id=post_id)
@@ -611,7 +672,29 @@ class LikePost(APIView):
             return Response({'msg': 'The post is already liked'}, status=status.HTTP_200_OK)
 
 
+    @swagger_auto_schema(
+        tags=['글', ],
+        operation_id='like_post_delete',
+        operation_summary='글 좋아요 취소',
+        manual_parameters=[
+            openapi.Parameter('post_id', openapi.IN_PATH, type=openapi.TYPE_NUMBER),
+        ],
+        responses={
+            200: openapi.Response(
+                description='성공',
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                    }
+                )
+            ),
+            400: openapi.Response(description='',),
+        }
+    )
     def delete(self, request, post_id):
+        """
+
+        """
         try:
             post = Post.objects.get(id=post_id)
         except Exception as e:
@@ -634,11 +717,58 @@ class ReportPost(APIView):
 
 
 class LikeComment(APIView):
-    def put(self, request, nickname=None, comment_id=None):
-        return Response({})
 
+    @swagger_auto_schema(
+        tags=['댓글', ],
+        operation_id='like_comment_put',
+        operation_summary='댓글 좋아요[x]',
+        manual_parameters=[
+            openapi.Parameter('comment_id', openapi.IN_PATH, type=openapi.TYPE_NUMBER),
+        ],
+        responses={
+            200: openapi.Response(
+                description='성공',
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                    }
+                )
+            ),
+            400: openapi.Response(description='',),
+        }
+    )
+    def put(self, request, comment_id=None):
+        """
+        #TODO
+        """
+        logger.error('NOT Implement')
+        return Response({}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        tags=['댓글', ],
+        operation_id='like_comment_delete[x]',
+        operation_summary='댓글 좋아요 취소[x]',
+        manual_parameters=[
+            openapi.Parameter('comment_id', openapi.IN_PATH, type=openapi.TYPE_NUMBER),
+        ],
+        responses={
+            200: openapi.Response(
+                description='성공',
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                    }
+                )
+            ),
+            400: openapi.Response(description='',),
+        }
+    )
     def delete(self, request, nickname=None, comment_id=None):
-        return Response({})
+        """
+        #TODO
+        """
+        logger.error('NOT Implement')
+        return Response({}, status=status.HTTP_200_OK)
 
 
 class ReportComment(APIView):
@@ -647,3 +777,122 @@ class ReportComment(APIView):
 
     def delete(self, request, nickname=None, comment_id=None):
         return Response({})
+
+
+class CommentPost(APIView):
+
+    @swagger_auto_schema(
+        tags=['댓글', ],
+        operation_id='comment_post_put',
+        operation_summary='댓글 쓰기[x]',
+        manual_parameters=[
+            openapi.Parameter('post_id', openapi.IN_PATH, type=openapi.TYPE_NUMBER),
+        ],
+        responses={
+            200: openapi.Response(
+                description='성공',
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                    }
+                )
+            ),
+            400: openapi.Response(description='',),
+        }
+    )
+    def put(self, request, post_id):
+        """
+        #TODO
+        """
+        logger.error('NOT Implement')
+        return Response({}, status=status.HTTP_200_OK)
+
+
+class CommentComment(APIView):
+
+    @swagger_auto_schema(
+        tags=['댓글', ],
+        operation_id='comment_comment',
+        operation_summary='대댓글 쓰기[x]',
+        manual_parameters=[
+            openapi.Parameter('comment_id', openapi.IN_PATH, type=openapi.TYPE_NUMBER),
+        ],
+        responses={
+            200: openapi.Response(
+                description='성공',
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                    }
+                )
+            ),
+            400: openapi.Response(description='',),
+        }
+    )
+    def put(self, request, comment_id):
+        """
+        #TODO
+        """
+        logger.error('NOT Implement')
+        return Response({}, status=status.HTTP_200_OK)
+
+
+class CommentDetail(APIView):
+
+    @swagger_auto_schema(
+        tags=['댓글', ],
+        operation_id='comment_post',
+        operation_summary='댓글 수정하기[x]',
+        manual_parameters=[
+            openapi.Parameter('comment_id', openapi.IN_PATH, type=openapi.TYPE_NUMBER),
+        ],
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'content': openapi.Schema(type=openapi.TYPE_STRING, description='content'),
+            },
+        ),
+        responses={
+            200: openapi.Response(
+                description='성공',
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                    }
+                )
+            ),
+            400: openapi.Response(description='',),
+        }
+    )
+    def post(self, request):
+        """
+        #TODO
+        """
+        logger.error('NOT Implement')
+        return Response({}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        tags=['댓글', ],
+        operation_id='comment_delete',
+        operation_summary='댓글 삭제하기[x]',
+        manual_parameters=[
+            openapi.Parameter('comment_id', openapi.IN_PATH, type=openapi.TYPE_NUMBER),
+        ],
+        responses={
+            200: openapi.Response(
+                description='성공',
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                    }
+                ),
+            ),
+            400: openapi.Response(description='',),
+        }
+    )
+    def delete(self, request):
+        """
+        #TODO
+        """
+        logger.error('NOT Implement')
+        return Response({}, status=status.HTTP_200_OK)

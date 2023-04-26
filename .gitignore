@@ -7,3 +7,4 @@ venv/
 **/keystore.py
 
 config/settings/local.py
+logs/
