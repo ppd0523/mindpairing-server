@@ -132,7 +132,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
@@ -148,21 +147,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'membership.User'
 
-DEFAULT_FILE_STORAGE = 'config.firebase_storage.FirebaseStorage'
-FIREBASE_STORAGE_BUCKET = 'mindpairing.appspot.com'
-
-FIREBASE_INFO = {
-    "type": "service_account",
-    "project_id": "mindpairing",
-    "private_key_id": os.environ.get('FIREBASE_PRIVATE_KEY_ID', None),
-    "private_key": os.environ.get('FIREBASE_PRIVATE_KEY', None),
-    "client_email": "firebase-adminsdk-d4y1j@mindpairing.iam.gserviceaccount.com",
-    "client_id": "117916994326793991387",
-    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    "token_uri": "https://oauth2.googleapis.com/token",
-    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-d4y1j%40mindpairing.iam.gserviceaccount.com"
-}
 
 LOGGING = {
     'version': 1,
