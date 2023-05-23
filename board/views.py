@@ -638,7 +638,6 @@ class LikePost(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-
     @swagger_auto_schema(
         tags=['글', ],
         operation_id='like_post_put',
@@ -780,11 +779,13 @@ class ReportComment(APIView):
 
 
 class CommentPost(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         tags=['댓글', ],
         operation_id='comment_post_put',
-        operation_summary='댓글 쓰기[x]',
+        operation_summary='댓글 쓰기',
         manual_parameters=[
             openapi.Parameter('post_id', openapi.IN_PATH, type=openapi.TYPE_NUMBER),
         ],
@@ -802,13 +803,31 @@ class CommentPost(APIView):
     )
     def put(self, request, post_id):
         """
-        #TODO
+        댓글 쓰기 함수
         """
-        logger.error('NOT Implement')
-        return Response({}, status=status.HTTP_200_OK)
+        if 'content' not in request.data:
+            return Response({'msg': '\'content\' NOT in body'}, status=status.HTTP_400_BAD_REQUEST)
 
+        try:
+            post = Post.objects.get(id=post_id)
+        except Exception as e:
+            return Response({'msg': 'no post_id '}, status=status.HTTP_400_BAD_REQUEST)
+
+        comment = Comment(
+            user_id=request.user,
+            content=request.data['content'],
+            post_id=post,
+            parent_comment_id=None,
+        )
+
+        comment.save()
+        serializer = CommentSerializer(comment, user_id=request.user)
+
+        return Response({'data': serializer.data}, status=status.HTTP_200_OK)
 
 class CommentComment(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         tags=['댓글', ],
