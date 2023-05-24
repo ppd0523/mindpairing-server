@@ -6,7 +6,6 @@ from board.views import *
 
 # /users/
 urlpatterns = [
-    # GET
     path('login/kakao/', KakaoLoginAuth.as_view(), name='kakao_auth'),
     path('login/kakao/web/', KakaoLoginWeb.as_view(), name='kakao_web_login'),
     path('login/kakao/web/callback/', KakaoLoginWebCallback.as_view(), name='kakao_web_callback'),
@@ -17,5 +16,5 @@ urlpatterns = [
 
     path('profile/', UserProfile.as_view(), name='profile'),  # GET, POST
 
-    # path('login/kakaologin/', kakaoLoginTestPage, name='kakao_login'),
+    path('login/kakaologin/', kakaoLoginTestPage, name='kakao_login'),
 ]

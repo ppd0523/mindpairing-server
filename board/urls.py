@@ -12,6 +12,5 @@ urlpatterns = [
     path('posts/', CreateOrGetPost.as_view(), name='create_post_detail'),
 
     path('comments/<int:comment_id>/like/', LikeComment.as_view(), name='like_post'),
-    path('comments/<int:comment_id>/comment/', CommentComment.as_view(), name='comment_detail'),
     path('comments/<int:comment_id>/', CommentDetail.as_view(), name='comment_detail'),
 ]

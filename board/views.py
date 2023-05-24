@@ -785,16 +785,31 @@ class CommentPost(APIView):
     @swagger_auto_schema(
         tags=['댓글', ],
         operation_id='comment_post_put',
-        operation_summary='댓글 쓰기',
+        operation_summary='댓글, 대댓글 쓰기',
         manual_parameters=[
             openapi.Parameter('post_id', openapi.IN_PATH, type=openapi.TYPE_NUMBER),
         ],
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['content'],
+            properties={
+                'content': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description='댓글 내용. 길이는 1 이상',
+                ),
+                'parent_comment_id': openapi.Schema(
+                    type=openapi.TYPE_NUMBER,
+                    description='대댓글 작성할 경우 원댓글 id',
+                ),
+            },
+        ),
         responses={
             200: openapi.Response(
                 description='성공',
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
+
                     }
                 )
             ),
@@ -803,57 +818,37 @@ class CommentPost(APIView):
     )
     def put(self, request, post_id):
         """
-        댓글 쓰기 함수
+        댓글 쓰기. content의 길이는 0 이상이어야 한다.
         """
         if 'content' not in request.data:
             return Response({'msg': '\'content\' NOT in body'}, status=status.HTTP_400_BAD_REQUEST)
 
+        if len(request.data['content']) == 0:
+            return Response({'msg': '\'content\' length is 0'}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             post = Post.objects.get(id=post_id)
         except Exception as e:
-            return Response({'msg': 'no post_id '}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'msg': 'NO post_id '}, status=status.HTTP_400_BAD_REQUEST)
+
+        parent_commend_id = None
+        if 'parent_commend_id' in request.data:
+            try:
+                parent_commend_id = Comment.objects.get(id=parent_commend_id)
+            except Exception as e:
+                return Response({'msg': 'NO parent_comment_id '}, status=status.HTTP_400_BAD_REQUEST)
 
         comment = Comment(
             user_id=request.user,
             content=request.data['content'],
             post_id=post,
-            parent_comment_id=None,
+            parent_comment_id=parent_commend_id,
         )
 
         comment.save()
         serializer = CommentSerializer(comment, user_id=request.user)
 
         return Response({'data': serializer.data}, status=status.HTTP_200_OK)
-
-class CommentComment(APIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    @swagger_auto_schema(
-        tags=['댓글', ],
-        operation_id='comment_comment',
-        operation_summary='대댓글 쓰기[x]',
-        manual_parameters=[
-            openapi.Parameter('comment_id', openapi.IN_PATH, type=openapi.TYPE_NUMBER),
-        ],
-        responses={
-            200: openapi.Response(
-                description='성공',
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                    }
-                )
-            ),
-            400: openapi.Response(description='',),
-        }
-    )
-    def put(self, request, comment_id):
-        """
-        #TODO
-        """
-        logger.error('NOT Implement')
-        return Response({}, status=status.HTTP_200_OK)
 
 
 class CommentDetail(APIView):

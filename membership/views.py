@@ -16,7 +16,6 @@ from .serializers import *
 
 
 class KakaoLoginAuth(APIView):
-
     @swagger_auto_schema(
         tags=['로그인'],
         operation_id='kakao_login_auth_post',
@@ -127,7 +126,8 @@ class KakaoLoginWebCallback(APIView):
             "code": request.GET["code"],
         }
 
-        token_info = requests.post(KAKAO_OAUTH_TOKEN_API, data=data, headers={"Content-type" : "application/json"}).json()
+        # token_info = requests.post(KAKAO_OAUTH_TOKEN_API, data=data, headers={"Content-Type" : "application/json"}).json()
+        token_info = requests.post(KAKAO_OAUTH_TOKEN_API, data=data, headers={"Content-Type" : "application/x-www-form-urlencoded"}).json()
 
         access_token = token_info["access_token"]
         kakao_resource = requests.get("https://kapi.kakao.com/v2/user/me", headers={
