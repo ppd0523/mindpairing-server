@@ -70,23 +70,14 @@ class KakaoLoginAuth(APIView):
         if res.status_code != 200:
             return Response({'msg': 'request body should be in \'access_token\''}, status=status.HTTP_400_BAD_REQUEST)
 
-        kakao_resource = res.json()
-        print(kakao_resource)
-
-        # if 'for_partner' not in kakao_resource:
-        #     return Response({'msg': f'Kakao API({me_url}) return data NOT in \'for_partner\''}, status=status.HTTP_400_BAD_REQUEST)
-        #
-        # if 'uuid' not in kakao_resource['for_partner']:
-        #     return Response({'msg': f'Kakao API({me_url}) return data NOT in [\'for_partner\'][\'uuid\']'}, status=status.HTTP_400_BAD_REQUEST)
-        #
-        # kakao_uuid = kakao_resource['for_partner']['uuid']
+        kakao_resource = res.json()  # {'id': <int>, 'connected_at': '2023-05-01T08:21:33Z', 'properties': {'nickname': '이강현'}, 'kakao_account': {'profile_nickname_needs_agreement': False, 'profile': {'nickname': '이강현'}}}
 
         kakao_id = kakao_resource['id']
 
-        oa, oa_created = OpenAuth.objects.get_or_create(kakao=str(kakao_id))
+        oa, oa_created = OpenAuth.objects.get_or_create(kakao=f'k{kakao_id}')
 
         if oa_created:
-            user = User.objects.create_user(nickname=str(kakao_id))
+            user = User.objects.create_user(nickname=f'k{kakao_id}')
 
             oa.user_id = user
             oa.kakao_update_at = timezone.now()
