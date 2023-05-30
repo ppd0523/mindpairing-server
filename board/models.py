@@ -103,7 +103,7 @@ class Post(models.Model):
         ordering = ('-create_at', )
 
     def __str__(self):
-        return f"{self.id} {self.board_id} {self.hashtag_id} {self.mbti} {self.user_id} {self.title}"
+        return f"#{self.id}({self.board_id}/{self.hashtag_id})"
 
 
 class PostImage(models.Model):
@@ -175,7 +175,7 @@ class Comment(models.Model):
         db_table = 'comment'
 
     def __str__(self):
-        return f"[{self.post_id}] {self.user_id} {self.content[:10]}({self.like}/{self.report})"
+        return f"{self.id}"
 
 
 class CommentReportAssoc(models.Model):

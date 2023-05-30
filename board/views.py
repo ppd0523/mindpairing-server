@@ -2,6 +2,7 @@ from django.core.paginator import Paginator
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from drf_yasg.utils import swagger_auto_schema
@@ -831,18 +832,20 @@ class CommentPost(APIView):
         except Exception as e:
             return Response({'msg': 'NO post_id '}, status=status.HTTP_400_BAD_REQUEST)
 
-        parent_commend_id = None
-        if 'parent_commend_id' in request.data:
+        parent_comment_id = request.data.get('parent_comment_id', None)
+        if 'parent_comment_id' in request.data:
             try:
-                parent_commend_id = Comment.objects.get(id=parent_commend_id)
+                parent_comment_id = Comment.objects.get(id=parent_comment_id)
+                if parent_comment_id.delete_at:
+                    raise Exception('Parent comment is deleted')
             except Exception as e:
                 return Response({'msg': 'NO parent_comment_id '}, status=status.HTTP_400_BAD_REQUEST)
 
         comment = Comment(
             user_id=request.user,
-            content=request.data['content'],
+            content=request.data['content', ],
             post_id=post,
-            parent_comment_id=parent_commend_id,
+            parent_comment_id=parent_comment_id,
         )
 
         comment.save()
@@ -852,18 +855,22 @@ class CommentPost(APIView):
 
 
 class CommentDetail(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         tags=['댓글', ],
         operation_id='comment_post',
-        operation_summary='댓글 수정하기[x]',
+        operation_summary='댓글 수정하기',
         manual_parameters=[
             openapi.Parameter('comment_id', openapi.IN_PATH, type=openapi.TYPE_NUMBER),
         ],
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
+            required=['content', ],
             properties={
-                'content': openapi.Schema(type=openapi.TYPE_STRING, description='content'),
+                'content': openapi.Schema(type=openapi.TYPE_STRING, description='content. large than 0 length'),
+                'parent_comment_id': openapi.Schema(type=openapi.TYPE_NUMBER, description='대댓글 작성할 때, 원 댓글의 id'),
             },
         ),
         responses={
@@ -878,17 +885,35 @@ class CommentDetail(APIView):
             400: openapi.Response(description='',),
         }
     )
-    def post(self, request):
+    def post(self, request, comment_id):
         """
-        #TODO
+        댓글 수정 함수. 자신이 쓴 댓글만 수정 가능.
         """
-        logger.error('NOT Implement')
-        return Response({}, status=status.HTTP_200_OK)
+        content = request.data.get('content', None)
+
+        try:
+            comment = Comment.objects.get(id=comment_id)
+
+        except Exception as e:
+            return Response({'msg': 'comment_id NOT found'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if comment.user_id != request.user:
+            return Response({'msg': 'NO author'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if content:
+            comment.content = content
+            comment.save()
+        else:
+            return Response({'msg': 'NO empty content'}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = CommentSerializer(comment, user_id=request.user)
+
+        return Response({'data': serializer.data}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         tags=['댓글', ],
         operation_id='comment_delete',
-        operation_summary='댓글 삭제하기[x]',
+        operation_summary='댓글 삭제하기',
         manual_parameters=[
             openapi.Parameter('comment_id', openapi.IN_PATH, type=openapi.TYPE_NUMBER),
         ],
@@ -904,9 +929,21 @@ class CommentDetail(APIView):
             400: openapi.Response(description='',),
         }
     )
-    def delete(self, request):
+    def delete(self, request, comment_id):
         """
-        #TODO
+        댓글 삭제하기
         """
-        logger.error('NOT Implement')
-        return Response({}, status=status.HTTP_200_OK)
+        try:
+            comment = Comment.objects.get(id=comment_id)
+            if comment.delete_at:
+                return Response({'msg': 'Already deleted'}, status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({'msg': 'comment_id NOT found'}, status=status.HTTP_400_BAD_REQUEST)
+
+        comment.content = '삭제된 댓글입니다'
+        comment.delete_at = timezone.now()
+        comment.save()
+
+        serializer = CommentSerializer(comment, user_id=request.user)
+
+        return Response({'data': serializer.data}, status=status.HTTP_200_OK)

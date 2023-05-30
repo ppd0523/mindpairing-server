@@ -76,8 +76,8 @@ class MessageReportAssocAdmin(admin.ModelAdmin):
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
-    list_display = ['post_id', 'parent_comment_id', 'user_id', 'content', 'like', 'formed_create_at']
-    list_display_links = ['content']
+    list_display = ['id', 'post_id', 'parent_comment_id', 'user_id', 'content', 'like', 'formed_create_at']
+    list_display_links = ['id', 'content']
     readonly_fields = ['like', 'report']
     search_fields = ['post_id', 'user_id', 'content']
 
