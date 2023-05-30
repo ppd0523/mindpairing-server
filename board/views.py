@@ -667,6 +667,8 @@ class LikePost(APIView):
         liked, created = post.like_post_assoc_set.get_or_create(user_id=request.user)
 
         if created:
+            post.like += 1
+            post.save()
             return Response({}, status=status.HTTP_201_CREATED)
         else:
             return Response({'msg': 'The post is already liked'}, status=status.HTTP_200_OK)
@@ -843,7 +845,7 @@ class CommentPost(APIView):
 
         comment = Comment(
             user_id=request.user,
-            content=request.data['content', ],
+            content=request.data['content'],
             post_id=post,
             parent_comment_id=parent_comment_id,
         )
