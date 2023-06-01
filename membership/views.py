@@ -71,6 +71,7 @@ class KakaoLoginAuth(APIView):
             return Response({'msg': 'request body should be in \'access_token\''}, status=status.HTTP_400_BAD_REQUEST)
 
         kakao_resource = res.json()  # {'id': <int>, 'connected_at': '2023-05-01T08:21:33Z', 'properties': {'nickname': '이강현'}, 'kakao_account': {'profile_nickname_needs_agreement': False, 'profile': {'nickname': '이강현'}}}
+        print(kakao_resource)
 
         kakao_id = kakao_resource['id']
 

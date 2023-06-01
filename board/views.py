@@ -507,19 +507,22 @@ class CreateOrGetPost(APIView):
         serializer = PostDetailSerializer(post, user_id=request.user)
         return Response({'data': serializer.data}, status=status.HTTP_201_CREATED)
 
-
     @swagger_auto_schema(
         tags=['글', ],
         operation_id='post_list_get',
         operation_summary='글 목록',
         manual_parameters=[
             openapi.Parameter(
-                'board_index', openapi.IN_PATH, type=openapi.TYPE_NUMBER,
+                'category', openapi.IN_QUERY, type=openapi.TYPE_STRING,
                 default='',
             ),
             openapi.Parameter(
-                'topic_index', openapi.IN_PATH, type=openapi.TYPE_NUMBER,
-                default=1,
+                'topic', openapi.IN_QUERY, type=openapi.TYPE_STRING,
+                default='',
+            ),
+            openapi.Parameter(
+                'mbti', openapi.IN_QUERY, type=openapi.TYPE_STRING,
+                default='',
             ),
             openapi.Parameter(
                 'pageSize', openapi.IN_QUERY, type=openapi.TYPE_NUMBER,
@@ -558,30 +561,42 @@ class CreateOrGetPost(APIView):
                     },
                 )
             ),
-            400: openapi.Response(description='없는 게시판 혹은 없는 토픽',),
+            400: openapi.Response(description='없는 게시판 혹은 없는 토픽', ),
         }
     )
     def get(self, request):
-        filter_dict = {'hidden': False}
-        d = request.GET.get('board-index', None)
-        if d:
-            filter_dict['board-index'] = d
+        """
+        category
+        topic
+        mbti
+        pageNum
+        pageSize
+        """
+        posts = Post.objects.filter(hidden=False)
 
-        d = request.GET.get('topic-index', None)
-        if d:
-            filter_dict['topic-index'] = d
+        mbti = request.GET.get('mbti', None)
+        if mbti:
+            mbti = mbti.upper()
+            mbti = mbti.split(',')
+            posts = posts.filter(mbti__in=mbti)
 
-        d = request.GET.get('mbti', None)
-        if d:
-            filter_dict['mbti'] = d
+        topic = request.GET.get('topic', None)
+        if topic:
+            topic = topic.split(',')
+            hashtag = Hashtag.objects.filter(text__in=topic)
+            posts = posts.filter(hashtag_id__in=hashtag)
 
-        posts = Post.objects.filter(**filter_dict).order_by('-create_at')
+        category = request.GET.get('category', None)
+        if category:
+            category = category.split(',')
+            boards = Board.objects.filter(category__in=category, hidden=False)
+            posts = posts.filter(board_id__in=boards)
 
         try:
             page_size = int(request.GET.get('pageSize', '10'))
             page_num = int(request.GET.get('pageNum', '1'))
         except Exception as e:
-            return Response({'msg': 'pageSize and pageNum MUST be NUMBER'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'msg': 'pageSize and pageNum MUST be Integer'}, status=status.HTTP_400_BAD_REQUEST)
 
         post_paginator = Paginator(posts, page_size)  # zero based
         paged_posts = post_paginator.get_page(page_num)
@@ -669,10 +684,11 @@ class LikePost(APIView):
         if created:
             post.like += 1
             post.save()
-            return Response({}, status=status.HTTP_201_CREATED)
+            serializer = SimplePostSerializer(post, user_id=request.user)
+
+            return Response({'data': serializer.data}, status=status.HTTP_201_CREATED)
         else:
             return Response({'msg': 'The post is already liked'}, status=status.HTTP_200_OK)
-
 
     @swagger_auto_schema(
         tags=['글', ],
@@ -690,12 +706,12 @@ class LikePost(APIView):
                     }
                 )
             ),
-            400: openapi.Response(description='',),
+            400: openapi.Response(description='', ),
         }
     )
     def delete(self, request, post_id):
         """
-
+        글 좋아요 취소하기
         """
         try:
             post = Post.objects.get(id=post_id)
@@ -705,6 +721,8 @@ class LikePost(APIView):
         try:
             liked = post.like_post_assoc_set.get(user_id=request.user)
             liked.delete()
+            post.like -= 1
+            post.save()
             return Response({}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'msg': str(e)}, status=status.HTTP_204_NO_CONTENT)
@@ -723,7 +741,7 @@ class LikeComment(APIView):
     @swagger_auto_schema(
         tags=['댓글', ],
         operation_id='like_comment_put',
-        operation_summary='댓글 좋아요[x]',
+        operation_summary='댓글 좋아요',
         manual_parameters=[
             openapi.Parameter('comment_id', openapi.IN_PATH, type=openapi.TYPE_NUMBER),
         ],
@@ -736,20 +754,32 @@ class LikeComment(APIView):
                     }
                 )
             ),
-            400: openapi.Response(description='',),
+            400: openapi.Response(description='', ),
         }
     )
     def put(self, request, comment_id=None):
         """
-        #TODO
+        댓글 좋아요
         """
-        logger.error('NOT Implement')
-        return Response({}, status=status.HTTP_200_OK)
+        try:
+            comment = Comment.objects.get(id=comment_id)
+        except Exception as e:
+            return Response({'msg': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        liked, created = comment.like_post_assoc_set.get_or_create(user_id=request.user)
+
+        if created:
+            comment.like += 1
+            comment.save()
+            serializer = CommentSerializer(comment, user_id=request.user)
+            return Response({'data': serializer.data}, status=status.HTTP_201_CREATED)
+        else:
+            return Response({'msg': 'The post is already liked'}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         tags=['댓글', ],
-        operation_id='like_comment_delete[x]',
-        operation_summary='댓글 좋아요 취소[x]',
+        operation_id='like_comment_delete',
+        operation_summary='댓글 좋아요 취소',
         manual_parameters=[
             openapi.Parameter('comment_id', openapi.IN_PATH, type=openapi.TYPE_NUMBER),
         ],
@@ -762,15 +792,28 @@ class LikeComment(APIView):
                     }
                 )
             ),
-            400: openapi.Response(description='',),
+            400: openapi.Response(description='', ),
         }
     )
-    def delete(self, request, nickname=None, comment_id=None):
+    def delete(self, request, comment_id=None):
         """
-        #TODO
+        댓글 좋아요 취소하기
         """
-        logger.error('NOT Implement')
-        return Response({}, status=status.HTTP_200_OK)
+        try:
+            comment = Comment.objects.get(id=comment_id)
+        except Exception as e:
+            return Response({'msg': 'NOT found comment_id'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+        try:
+            liked = comment.like_comment_assoc_set.get(user_id=request.user)
+            liked.delete()
+            comment.like -= 1
+            comment.save()
+
+            return Response({}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'msg': 'NO liked'}, status=status.HTTP_204_NO_CONTENT)
 
 
 class ReportComment(APIView):
