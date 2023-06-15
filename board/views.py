@@ -737,6 +737,8 @@ class ReportPost(APIView):
 
 
 class LikeComment(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         tags=['댓글', ],
@@ -766,7 +768,7 @@ class LikeComment(APIView):
         except Exception as e:
             return Response({'msg': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        liked, created = comment.like_post_assoc_set.get_or_create(user_id=request.user)
+        liked, created = comment.like_comment_assoc_set.get_or_create(user_id=request.user)
 
         if created:
             comment.like += 1
