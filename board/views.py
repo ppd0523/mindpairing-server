@@ -9,6 +9,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from .serializers import *
 
+import re
 import logging
 logger = logging.getLogger("django")
 
@@ -235,6 +236,8 @@ class PostDetail(APIView):
             return Response({'msg': 'This post is hidden'}, status=status.HTTP_204_NO_CONTENT)
 
         post.view = post.view + 1
+        post.save()
+
         post_serializer = PostDetailSerializer(post, user_id=request.user, many=False)
 
         comment_serializer = CommentSerializer(post.comment_set.filter(hidden=False), user_id=request.user, many=True)
@@ -525,12 +528,16 @@ class CreateOrGetPost(APIView):
                 default='',
             ),
             openapi.Parameter(
+                'order', openapi.IN_QUERY, type=openapi.TYPE_STRING,
+                default='', description='\'like\', \'view\' or \'create\'',
+            ),
+            openapi.Parameter(
                 'pageSize', openapi.IN_QUERY, type=openapi.TYPE_NUMBER,
                 default=10, description='한 번에 호출하는 요약 게시글 개수. 최대 Size 100',
             ),
             openapi.Parameter(
                 'pageNum', openapi.IN_QUERY, type=openapi.TYPE_NUMBER,
-                default=1, description='게시글 페이지 번호. 최근에 생성된 데이터가 1 Page'
+                default=1, description='게시글 페이지 번호. 최근에 생성된 데이터가 1 Page',
             ),
         ],
         responses={
@@ -569,6 +576,7 @@ class CreateOrGetPost(APIView):
         category
         topic
         mbti
+        order
         pageNum
         pageSize
         """
@@ -576,21 +584,26 @@ class CreateOrGetPost(APIView):
 
         mbti = request.GET.get('mbti', None)
         if mbti:
-            mbti = mbti.upper()
-            mbti = mbti.split(',')
-            posts = posts.filter(mbti__in=mbti)
+            m = re.match(r'[EeIi][SsNn][TtFf][PpJj]', mbti)
+            if m:
+                mbti = mbti.upper()
+                posts = posts.filter(mbti=mbti)
 
         topic = request.GET.get('topic', None)
         if topic:
-            topic = topic.split(',')
-            hashtag = Hashtag.objects.filter(text__in=topic)
-            posts = posts.filter(hashtag_id__in=hashtag)
+            topics: list = topic.split(',')
+            hashtags = Hashtag.objects.filter(text__in=topics)
+            posts = posts.filter(hashtag_id__in=hashtags)
 
         category = request.GET.get('category', None)
         if category:
-            category = category.split(',')
-            boards = Board.objects.filter(category__in=category, hidden=False)
-            posts = posts.filter(board_id__in=boards)
+            board = Board.objects.get(category=category, hidden=False)
+            posts = posts.filter(board_id=board)
+
+        order = request.GET.get('order', None)
+        if order in ['view', 'like', 'create']:
+            if order == 'create': order = 'create_at'
+            posts = posts.order_by(f'-{order}')
 
         try:
             page_size = int(request.GET.get('pageSize', '10'))
